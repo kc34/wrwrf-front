@@ -1,0 +1,143 @@
+<html ng-app="wrwrfApp">
+<head>
+    <title>Will Rice Will Ruin Friendships</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous"> 
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script> 
+    <script>
+        class WrwrfController {
+            constructor($scope, $http, $interval) {
+                this.http_ = $http;
+                this.backendURL = "http://localhost:3000"
+                this.dunks = {};
+                this.redDunks = 0;
+                this.blueDunks = 0;
+                this.yellowDunks = 0;
+                this.getDunks();
+                $interval(() => {this.getDunks();}, 1000);
+            }
+
+            getDunks() {
+                const successFn = (response) => {
+                    this.dunks = response.data;
+                    this.redDunks = this.dunks
+                        .filter((row) => { return row.winner == 'red'})
+                        .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
+                    this.blueDunks = this.dunks
+                        .filter((row) => { return row.winner == 'blue'})
+                        .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
+                    this.yellowDunks = this.dunks
+                        .filter((row) => { return row.winner == 'yellow'})
+                        .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
+                };
+                const errorFn = (response) => {
+                    console.log(error);
+                }
+                this.http_.get(this.backendURL + '/')
+                    .then(successFn, errorFn);
+                }
+
+            //postPost(team1, team2) {
+            //    this.http_.post('http://localhost:3000/dunk/'+ team1 + '/on/' + team2, {name: this.name, message: this.message})
+            //        .then(
+            //        (res) => {this.getAllPosts();},
+            //        (res) => {}
+            //        );
+            //}
+
+            dunk(team1, team2) {
+                this.http_.get(this.backendURL + '/dunk/'+ team1 + '/on/' + team2)
+                    .then(
+                        (res) => {this.getDunks();},
+                        (res) => {});
+            }
+        }
+        const wrwrfApp = angular.module('wrwrfApp', []);
+
+        wrwrfApp.controller('WrwrfController', WrwrfController);
+  </script>
+</head>
+<body ng-controller="WrwrfController as $ctrl">
+    <div class="container">
+        <h1>THIS IS IN BETA</h1>
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Create Post</h3>
+            </div>
+            <div class="panel-body">
+                <div>
+                    <h1>RED DUNKS: {{$ctrl.redDunks}}</h1>
+                    <button
+                        class="btn btn-primary"
+                        ng-click="$ctrl.dunk('red', 'blue')">DUNK ON BLUE</button>
+                    <button
+                        class="btn btn-primary"
+                        ng-click="$ctrl.dunk('red', 'yellow')">DUNK ON YELLOW</button>
+                    <h1>BLUE DUNKS: {{$ctrl.blueDunks}}</h1>
+                    <button
+                        class="btn btn-primary"
+                        ng-click="$ctrl.dunk('blue', 'red')">DUNK ON RED</button>
+                    <button
+                        class="btn btn-primary"
+                        ng-click="$ctrl.dunk('blue', 'yellow')">DUNK ON YELLOW</button>
+                    <h1>YELLOW DUNKS: {{$ctrl.yellowDunks}}</h1>
+                    <button
+                        class="btn btn-primary"
+                        ng-click="$ctrl.dunk('yellow', 'red')">DUNK ON RED</button>
+                    <button
+                        class="btn btn-primary"
+                        ng-click="$ctrl.dunk('yellow', 'blue')">DUNK ON BLUE</button>
+                </div>
+                <div>
+                    If you don't see numbers then I probably tripped on a power chord.
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--
+  <div class="container">
+    <h1>
+      Changbook
+    </h1>
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        <h3 class="panel-title">Create Post</h3>
+      </div>
+      <div class="panel-body">
+        <div class="form-group">
+          <label>Name:</label>
+          <input type="text"
+                 class="form-control"
+                 ng-model="$ctrl.name">
+          </input>
+        </div>
+        <div class="form-group">
+          <label>Message:</label>
+          <input type="text"
+                 class="form-control"
+                 ng-model="$ctrl.message">
+          </input>
+        </div>
+        <button class="btn btn-primary"
+                ng-class="{'disabled': (!($ctrl.name && $ctrl.message))}"
+                ng-click="$ctrl.postPost()">Create Post</button>
+      </div>
+    </div>
+    <div ng-repeat="post in $ctrl.posts | orderBy:'-timestamp'"
+         class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">{{post.name}} says:</h3>
+      </div>
+      <div class="panel-body">
+        {{post.message}}
+      </div>
+      <div class="panel-footer">
+        Posted on: {{post.timestamp | date:'medium'}}
+      </div>
+    </div>
+  </div>
+-->
+</body>
+</html>
