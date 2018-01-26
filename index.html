@@ -9,26 +9,67 @@
     <script>
         class WrwrfController {
             constructor($scope, $http, $interval) {
+                console.log("stop right there criminal scum");
+                console.log("everything is currently validated server-side")
                 this.http_ = $http;
-                this.backendURL = "http://localhost:3000"
+                this.backendURL = "http://10.122.78.183:3000"
                 this.dunks = {};
                 this.redDunks = 0;
                 this.blueDunks = 0;
                 this.yellowDunks = 0;
                 this.getDunks();
+                this.getNetDunks = (team) => this.totalDunksByTeam(team) - this.totalDunksOnTeam(team)
                 $interval(() => {this.getDunks();}, 1000);
             }
 
             getDunks() {
                 const successFn = (response) => {
                     this.dunks = response.data;
-                    this.redDunks = this.dunks
+                    this.teams = this.dunks.reduce((acc, row) => {
+                        if (acc.indexOf(row.winner) == -1)
+                            acc.push(row.winner);
+                        if (acc.indexOf(row.loser) == -1)
+                            acc.push(row.loser);
+                        return acc;
+                    }, [])
+                    this.dunkTable = this.teams.reduce((acc1, team1) => {
+                        acc1[team1] = this.teams.reduce((acc2, team2) => {
+                            acc2[team2] = 0;
+                            return acc2;
+                        }, {})
+                        return acc1;
+                    }, {});
+                    this.dunkTable = this.dunks.reduce((acc, row) => {
+                        if (!acc.hasOwnProperty(row.winner)) {
+                            acc[row.winner] = {};
+                        }
+                        if (!acc[row.winner].hasOwnProperty(row.loser)) {
+                            acc[row.winner][row.loser] = 0;
+                        }
+                        acc[row.winner][row.loser] = row["COUNT(*)"];
+                        return acc;
+                    }, this.dunkTable);
+                    this.totalDunksByTeam = this.dunks.reduce((acc, row) => {
+                        if (!acc.hasOwnProperty(row.winner)) {
+                            acc[row.winner] = 0;
+                        }
+                        acc[row.winner] += row["COUNT(*)"];
+                        return acc;
+                    }, {});
+                    this.totalDunksOnTeam = this.dunks.reduce((acc, row) => {
+                        if (!acc.hasOwnProperty(row.loser)) {
+                            acc[row.loser] = 0;
+                        }
+                        acc[row.loser] += row["COUNT(*)"];
+                        return acc;
+                    }, {});
+                    this.redDunks = response.data
                         .filter((row) => { return row.winner == 'red'})
                         .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
-                    this.blueDunks = this.dunks
+                    this.blueDunks = response.data
                         .filter((row) => { return row.winner == 'blue'})
                         .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
-                    this.yellowDunks = this.dunks
+                    this.yellowDunks = response.data
                         .filter((row) => { return row.winner == 'yellow'})
                         .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
                 };
@@ -37,7 +78,13 @@
                 }
                 this.http_.get(this.backendURL + '/')
                     .then(successFn, errorFn);
-                }
+            }
+
+            calculateDunks(team) {
+                return this.dunks
+                    .filter((row) => { return row.winner == team })
+                    .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
+            }
 
             //postPost(team1, team2) {
             //    this.http_.post('http://localhost:3000/dunk/'+ team1 + '/on/' + team2, {name: this.name, message: this.message})
@@ -61,41 +108,79 @@
 </head>
 <body ng-controller="WrwrfController as $ctrl">
     <div class="container">
-        <h1>THIS IS IN BETA</h1>
-        <div class="panel panel-primary">
+        <h1>WILL RICE WILL RUIN FRIENDSHIPS BETA</h1>
+        <div class="panel panel-default">
             <div class="panel-heading">
-                <h3 class="panel-title">Create Post</h3>
+                <h3 class="panel-title">DUNKS</h3>
             </div>
             <div class="panel-body">
-                <div>
-                    <div>
-                        The target you dunk on will become significant someday. That day is not today.
+                how to play
+                <ol>
+                    <li>pick a team</li>
+                    <li>get pissed</li>
+                </ol>
+                <div class="row">
+                    <div class="col-lg-4">
+                    <div class="panel panel-danger">
+                        <div class="panel-heading"><h1 class="panel-title">RED TEAM</h1></div>
+                        <div class="panel-body">
+                        <h2>NET DUNKS: {{2 * $ctrl.totalDunksByTeam['red'] - $ctrl.totalDunksOnTeam['red']}}</h2>
+                        <h4>TOTAL DUNKS: {{$ctrl.totalDunksByTeam['red']}}</h4>
+                        <h4>DUNKS FROM BLUE: {{$ctrl.dunkTable['blue']['red']}}</h4>
+                        <h4>DUNKS FROM YELLOW: {{$ctrl.dunkTable['yellow']['red']}}</h4>
+                        <button
+                            class="btn btn-primary"
+                            ng-click="$ctrl.dunk('red', 'blue')">DUNK ON BLUE</button>
+                        <button
+                            class="btn btn-primary"
+                            ng-click="$ctrl.dunk('red', 'yellow')">DUNK ON YELLOW</button>
+                        </div>
+                        <div class="panel-footer">FAMOUS DUNKERS: MAELES, ALAN</div>
                     </div>
-                    <h1>RED DUNKS: {{$ctrl.redDunks}}</h1>
-                    <button
-                        class="btn btn-primary"
-                        ng-click="$ctrl.dunk('red', 'blue')">DUNK ON BLUE</button>
-                    <button
-                        class="btn btn-primary"
-                        ng-click="$ctrl.dunk('red', 'yellow')">DUNK ON YELLOW</button>
-                    <h1>BLUE DUNKS: {{$ctrl.blueDunks}}</h1>
+                    </div>
+                <div class="col-lg-4">
+                <div class="panel panel-primary">
+                    <div class="panel-heading"><h1 class="panel-title">BLUE TEAM</h1></div>
+                    <div class="panel-body">
+                    <h2>NET DUNKS: {{2 * $ctrl.totalDunksByTeam['blue'] -$ctrl.totalDunksOnTeam['blue']}}</h2>
+                    <h4>TOTAL DUNKS: {{$ctrl.totalDunksByTeam['blue']}}</h4>
+                    <h4>DUNKS FROM RED: {{$ctrl.dunkTable['red']['blue']}}</h4>
+                    <h4>DUNKS FROM YELLOW: {{$ctrl.dunkTable['yellow']['blue']}}</h4>
                     <button
                         class="btn btn-primary"
                         ng-click="$ctrl.dunk('blue', 'red')">DUNK ON RED</button>
                     <button
                         class="btn btn-primary"
                         ng-click="$ctrl.dunk('blue', 'yellow')">DUNK ON YELLOW</button>
-                    <h1>YELLOW DUNKS: {{$ctrl.yellowDunks}}</h1>
-                    <button
-                        class="btn btn-primary"
-                        ng-click="$ctrl.dunk('yellow', 'red')">DUNK ON RED</button>
-                    <button
-                        class="btn btn-primary"
-                        ng-click="$ctrl.dunk('yellow', 'blue')">DUNK ON BLUE</button>
+                    </div>
+                    <div class="panel-footer">FAMOUS DUNKERS: KARTHIKA</div>
                 </div>
-                <div>
-                    If you don't see numbers then I probably tripped on a power cord.
                 </div>
+                <div class="col-lg-4">
+                    <div class="panel panel-warning">
+                        <div class="panel-heading"><h1 class="panel-title">TEAM YELLOW</h1></div>
+                        <div class="panel-body">
+                            <h2>NET DUNKS: {{2 * $ctrl.totalDunksByTeam['yellow'] - $ctrl.totalDunksOnTeam['yellow']}}</h2>
+                            <h4>TOTAL DUNKS: {{$ctrl.totalDunksByTeam['yellow']}}</h4>
+                            <h4>DUNKS FROM RED: {{$ctrl.dunkTable['red']['yellow']}}</h4>
+                            <h4>DUNKS FROM BLUE: {{$ctrl.dunkTable['blue']['yellow']}}</h4>
+                            <button
+                                class="btn btn-primary"
+                                ng-click="$ctrl.dunk('yellow', 'red')">DUNK ON RED</button>
+                            <button
+                                class="btn btn-primary"
+                                ng-click="$ctrl.dunk('yellow', 'blue')">DUNK ON BLUE</button>
+                            </div>
+                            <div class="panel-footer">"FAMOUS" DUNKERS: KC</div>
+                        </div>
+                    </div>
+                </div>
+                dev notes
+                <ul>
+                    <li>if you don't see numbers then you are not logged into rice owls. (mfw you think i'll pay for proper hosting)
+                    <li>want to become a famous dunker? lmk and i'll just hardcode you in lmao
+                    <li>score = 2 * your dunks - other dunks
+                </ul>
             </div>
         </div>
     </div>
