@@ -12,15 +12,54 @@
                 console.log("stop right there criminal scum");
                 console.log("everything is currently validated server-side")
                 this.http_ = $http;
-                this.backendURL = "http://10.122.78.183:3000"
+                this.backendURL = "http://localhost:3000"
                 this.dunks = {};
-                this.redDunks = 0;
-                this.blueDunks = 0;
-                this.yellowDunks = 0;
                 this.getDunks();
                 this.getNetDunks = (team) => this.totalDunksByTeam(team) - this.totalDunksOnTeam(team)
                 $interval(() => {this.getDunks();}, 1000);
             }
+
+            syncServerState(response) {
+                this.dunks = response.data;
+                this.teams = this.dunks.reduce((acc, row) => {
+                    if (acc.indexOf(row.winner) == -1)
+                        acc.push(row.winner);
+                    if (acc.indexOf(row.loser) == -1)
+                        acc.push(row.loser);
+                    return acc;
+                }, [])
+                this.dunkTable = this.teams.reduce((acc1, team1) => {
+                    acc1[team1] = this.teams.reduce((acc2, team2) => {
+                        acc2[team2] = 0;
+                        return acc2;
+                    }, {})
+                    return acc1;
+                }, {});
+                this.dunkTable = this.dunks.reduce((acc, row) => {
+                    if (!acc.hasOwnProperty(row.winner)) {
+                        acc[row.winner] = {};
+                    }
+                    if (!acc[row.winner].hasOwnProperty(row.loser)) {
+                        acc[row.winner][row.loser] = 0;
+                    }
+                    acc[row.winner][row.loser] = row["COUNT(*)"];
+                    return acc;
+                }, this.dunkTable);
+                this.totalDunksByTeam = this.dunks.reduce((acc, row) => {
+                    if (!acc.hasOwnProperty(row.winner)) {
+                        acc[row.winner] = 0;
+                    }
+                    acc[row.winner] += row["COUNT(*)"];
+                    return acc;
+                }, {});
+                this.totalDunksOnTeam = this.dunks.reduce((acc, row) => {
+                    if (!acc.hasOwnProperty(row.loser)) {
+                        acc[row.loser] = 0;
+                    }
+                    acc[row.loser] += row["COUNT(*)"];
+                    return acc;
+                }, {});
+            };
 
             getDunks() {
                 const successFn = (response) => {
@@ -63,21 +102,12 @@
                         acc[row.loser] += row["COUNT(*)"];
                         return acc;
                     }, {});
-                    this.redDunks = response.data
-                        .filter((row) => { return row.winner == 'red'})
-                        .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
-                    this.blueDunks = response.data
-                        .filter((row) => { return row.winner == 'blue'})
-                        .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
-                    this.yellowDunks = response.data
-                        .filter((row) => { return row.winner == 'yellow'})
-                        .reduce((acc, curr) => acc + curr["COUNT(*)"], 0);
                 };
                 const errorFn = (response) => {
                     console.log(error);
                 }
                 this.http_.get(this.backendURL + '/')
-                    .then(successFn, errorFn);
+                    .then((response) => this.syncServerState(response), errorFn);
             }
 
             calculateDunks(team) {
@@ -97,7 +127,7 @@
             dunk(team1, team2) {
                 this.http_.get(this.backendURL + '/dunk/'+ team1 + '/on/' + team2)
                     .then(
-                        (res) => {this.getDunks();},
+                        (response) => this.syncServerState(response),
                         (res) => {});
             }
         }
