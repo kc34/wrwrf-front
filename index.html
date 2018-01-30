@@ -14,9 +14,13 @@
                 this.http_ = $http;
                 this.backendURL = "http://localhost:3000"
                 this.dunks = {};
+                this.name = ""
+                this.dunkings = []
                 this.getDunks();
+                this.getDunkers();
                 this.getNetDunks = (team) => this.totalDunksByTeam(team) - this.totalDunksOnTeam(team)
                 $interval(() => {this.getDunks();}, 1000);
+                $interval(() => {this.getDunkers();}, 1000);
             }
 
             syncServerState(response) {
@@ -62,52 +66,16 @@
             };
 
             getDunks() {
-                const successFn = (response) => {
-                    this.dunks = response.data;
-                    this.teams = this.dunks.reduce((acc, row) => {
-                        if (acc.indexOf(row.winner) == -1)
-                            acc.push(row.winner);
-                        if (acc.indexOf(row.loser) == -1)
-                            acc.push(row.loser);
-                        return acc;
-                    }, [])
-                    this.dunkTable = this.teams.reduce((acc1, team1) => {
-                        acc1[team1] = this.teams.reduce((acc2, team2) => {
-                            acc2[team2] = 0;
-                            return acc2;
-                        }, {})
-                        return acc1;
-                    }, {});
-                    this.dunkTable = this.dunks.reduce((acc, row) => {
-                        if (!acc.hasOwnProperty(row.winner)) {
-                            acc[row.winner] = {};
-                        }
-                        if (!acc[row.winner].hasOwnProperty(row.loser)) {
-                            acc[row.winner][row.loser] = 0;
-                        }
-                        acc[row.winner][row.loser] = row["COUNT(*)"];
-                        return acc;
-                    }, this.dunkTable);
-                    this.totalDunksByTeam = this.dunks.reduce((acc, row) => {
-                        if (!acc.hasOwnProperty(row.winner)) {
-                            acc[row.winner] = 0;
-                        }
-                        acc[row.winner] += row["COUNT(*)"];
-                        return acc;
-                    }, {});
-                    this.totalDunksOnTeam = this.dunks.reduce((acc, row) => {
-                        if (!acc.hasOwnProperty(row.loser)) {
-                            acc[row.loser] = 0;
-                        }
-                        acc[row.loser] += row["COUNT(*)"];
-                        return acc;
-                    }, {});
-                };
                 const errorFn = (response) => {
                     console.log(error);
                 }
                 this.http_.get(this.backendURL + '/')
                     .then((response) => this.syncServerState(response), errorFn);
+            }
+
+            getDunkers() {
+                this.http_.get(this.backendURL + '/_/venus/daily')
+                    .then((response) => {this.dunkers = response.data})
             }
 
             calculateDunks(team) {
@@ -125,10 +93,17 @@
             //}
 
             dunk(team1, team2) {
-                this.http_.get(this.backendURL + '/dunk/'+ team1 + '/on/' + team2)
+                if (this.name == "") {
+                    this.http_.get(this.backendURL + '/_/mercury/dunk/'+ team1 + '/on/' + team2)
                     .then(
                         (response) => this.syncServerState(response),
                         (res) => {});
+                } else {
+                    this.http_.get(this.backendURL + '/_/venus/dunk/'+ team1 + '/on/' + team2 + '/by/' + this.name)
+                    .then(
+                        (response) => this.syncServerState(response),
+                        (res) => {});
+                }
             }
         }
         const wrwrfApp = angular.module('wrwrfApp', []);
@@ -148,39 +123,40 @@
                 <ol>
                     <li>pick a team</li>
                     <li>get pissed</li>
+                    <li>(optional) name here: <input ng-model="$ctrl.name" placeholder="KC"></input></li>
                 </ol>
                 <div class="row">
                     <div class="col-lg-4">
                     <div class="panel panel-danger">
                         <div class="panel-heading"><h1 class="panel-title">RED TEAM</h1></div>
                         <div class="panel-body">
-                        <h2>NET DUNKS: {{2 * $ctrl.totalDunksByTeam['red'] - $ctrl.totalDunksOnTeam['red']}}</h2>
+                        <h2>NET DUNKS: {{3 * $ctrl.totalDunksByTeam['red'] - 2 * $ctrl.totalDunksOnTeam['red']}}</h2>
                         <h4>TOTAL DUNKS: {{$ctrl.totalDunksByTeam['red']}}</h4>
                         <h4>DUNKS FROM BLUE: {{$ctrl.dunkTable['blue']['red']}}</h4>
                         <h4>DUNKS FROM YELLOW: {{$ctrl.dunkTable['yellow']['red']}}</h4>
                         <button
-                            class="btn btn-primary"
+                            class="btn btn-info"
                             ng-click="$ctrl.dunk('red', 'blue')">DUNK ON BLUE</button>
                         <button
-                            class="btn btn-primary"
+                            class="btn btn-warning"
                             ng-click="$ctrl.dunk('red', 'yellow')">DUNK ON YELLOW</button>
                         </div>
                         <div class="panel-footer">FAMOUS DUNKERS: MAELES, ALAN</div>
                     </div>
                     </div>
                 <div class="col-lg-4">
-                <div class="panel panel-primary">
+                <div class="panel panel-info">
                     <div class="panel-heading"><h1 class="panel-title">BLUE TEAM</h1></div>
                     <div class="panel-body">
-                    <h2>NET DUNKS: {{2 * $ctrl.totalDunksByTeam['blue'] -$ctrl.totalDunksOnTeam['blue']}}</h2>
+                    <h2>NET DUNKS: {{3 * $ctrl.totalDunksByTeam['blue'] - 2 * $ctrl.totalDunksOnTeam['blue']}}</h2>
                     <h4>TOTAL DUNKS: {{$ctrl.totalDunksByTeam['blue']}}</h4>
                     <h4>DUNKS FROM RED: {{$ctrl.dunkTable['red']['blue']}}</h4>
                     <h4>DUNKS FROM YELLOW: {{$ctrl.dunkTable['yellow']['blue']}}</h4>
                     <button
-                        class="btn btn-primary"
+                        class="btn btn-danger"
                         ng-click="$ctrl.dunk('blue', 'red')">DUNK ON RED</button>
                     <button
-                        class="btn btn-primary"
+                        class="btn btn-warning"
                         ng-click="$ctrl.dunk('blue', 'yellow')">DUNK ON YELLOW</button>
                     </div>
                     <div class="panel-footer">FAMOUS DUNKERS: KARTHIKA, THUC, JASON</div>
@@ -190,26 +166,48 @@
                     <div class="panel panel-warning">
                         <div class="panel-heading"><h1 class="panel-title">TEAM YELLOW</h1></div>
                         <div class="panel-body">
-                            <h2>NET DUNKS: {{2 * $ctrl.totalDunksByTeam['yellow'] - $ctrl.totalDunksOnTeam['yellow']}}</h2>
+                            <h2>NET DUNKS: {{3 * $ctrl.totalDunksByTeam['yellow'] - 2 * $ctrl.totalDunksOnTeam['yellow']}}</h2>
                             <h4>TOTAL DUNKS: {{$ctrl.totalDunksByTeam['yellow']}}</h4>
                             <h4>DUNKS FROM RED: {{$ctrl.dunkTable['red']['yellow']}}</h4>
                             <h4>DUNKS FROM BLUE: {{$ctrl.dunkTable['blue']['yellow']}}</h4>
                             <button
-                                class="btn btn-primary"
+                                class="btn btn-danger"
                                 ng-click="$ctrl.dunk('yellow', 'red')">DUNK ON RED</button>
                             <button
-                                class="btn btn-primary"
+                                class="btn btn-info"
                                 ng-click="$ctrl.dunk('yellow', 'blue')">DUNK ON BLUE</button>
                             </div>
-                            <div class="panel-footer">"FAMOUS" DUNKERS: KC</div>
+                            <div class="panel-footer">NO FAMOUS DUNKERS -- BE THE FIRST</div>
                         </div>
                     </div>
                 </div>
-                dev notes
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">TODAY'S DUNKERS</h3>
+            </div>
+            <div class="panel-body">
+                <table class="table">
+                    <tr ng-repeat="dunker in $ctrl.dunkers | orderBy:'-dunks'">
+                        <td>{{$index + 1}}</td>
+                        <td>{{dunker.name}}</td>
+                        <td>{{dunker.winner}}</td>
+                        <td>{{dunker.loser}}</td>
+                        <td>{{dunker.dunks}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">DEV NOTES</h3>
+            </div>
+            <div class="panel-body">
                 <ul>
-                    <li>if you don't see numbers then you are not logged into rice owls. (mfw you think i'll pay for proper hosting)
+                    <li>no longer required to be on Rice Owls (mfw i paid for proper hosting)
                     <li>want to become a famous dunker? lmk and i'll just hardcode you in lmao
-                    <li>score = 2 * your dunks - other dunks
+                    <li>score = 3 * your dunks - 2 * other dunks
                     <li>scheduled downtime at like midnight (12am 1/27)
                 </ul>
             </div>
